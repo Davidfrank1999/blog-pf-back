@@ -1,0 +1,36 @@
+{
+  "name": "blog-pf-back",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "contributors": [
+    {
+      "name": "David Franklin D.",
+      "email": "davidfranklin1999@gmail.com"
+    }
+  ],
+  "description": "Blogging platform -server",
+  "scripts": {
+    "start": "node --watch server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "keywords": [
+    "blog_platform"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "eslint": "^9.34.0",
+    "globals": "^16.3.0"
+  }
+}
