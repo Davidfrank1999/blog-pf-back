@@ -16,7 +16,7 @@ export const verfyToken = (req, res, next) => {
     }
 };
 
-export const requireRoles = (...allowedRoles) => (req, res, next) => {
+export const allowedRoles = (...allowedRoles) => (req, res, next) => {
     if (!allowedRoles.includes(req.user.role)) {
         throw new ApiError(403,'Forbidden. You do not have the required permissions.');
     }
