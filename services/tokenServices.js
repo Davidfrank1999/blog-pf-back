@@ -10,7 +10,7 @@ import ms from "ms";
 export const signAccessToken = (user) => {
     // Implementation here
     return jwt.sign(
-        {sub: user._id, email: user.email, roles: user.roles},
+        {_id: user._id, email: user.email, roles: user.roles},
         JWT_ACCESS_SECRET,
         {expiresIn: JWT_ACCESS_EXPIRES || '15m'}
     )
