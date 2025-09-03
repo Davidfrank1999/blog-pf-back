@@ -12,7 +12,7 @@ const app = express();
 
 //Middlewares
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: "http://localhost:5173",
   credentials: true,   // needed for cookies
 }));
 
