@@ -50,8 +50,8 @@ export const logout = async (req, res) => {
         res.clearCookie('refreshToken', {
             path: "/api/auth"});
     }  
-    await RefreshToken.deleteOne({ token });
-    return res.status(200).json(new ApiResponse(200, 'Logout successful'));
+    const result = await RefreshToken.deleteOne({ token });
+    return res.status(200).json(new ApiResponse(200,result.deletedCount ? "Logout successful" : "Token not found"));
 };
 
 
