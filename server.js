@@ -1,12 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 // imports
 import connectDB from './config/dbConfig.js';
 import { PORT, NODE_ENV, CORS_ORIGIN } from './config/env.js';
 import authRoutes from './routes/authRoutes.js';
-import blogPostRoutes from './routes/blogPostRoutes.js';
+import blogRoutes from "./routes/blogRoutes.js";
 import userRoutes from './routes/userRoutes.js';
 
 
@@ -19,11 +20,14 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
+app.use(helmet());
 
 // Routes
 app.use("/api/auth",authRoutes);
 app.use("/api/posts",blogPostRoutes);
+app.use("/api/blogs", blogRoutes);
 app.use("/api/user",userRoutes);
+app.use("/uploads", express.static("uploads"));
 
 
 // connect db
