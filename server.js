@@ -7,6 +7,7 @@ import connectDB from './config/dbConfig.js';
 import { PORT, NODE_ENV, CORS_ORIGIN } from './config/env.js';
 import authRoutes from './routes/authRoutes.js';
 import blogPostRoutes from './routes/blogPostRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth",authRoutes);
 app.use("/api/posts",blogPostRoutes);
+app.use("/api/user",userRoutes);
 
 
 // connect db
