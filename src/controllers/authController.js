@@ -1,10 +1,10 @@
 import { validateLoginBody, validateRegisterBody } from "../validators/authValidation.js"
-import { User } from "../models/UserModel.js"
+import { User } from "../../models/UserModel.js"
 import { ApiError } from "../utils/ApiError.js"
-import {verifyRefreshToken } from "../services/tokenServices.js";
+import {verifyRefreshToken } from "../../services/tokenServices.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import RefreshToken from "../models/RefreshTokenModel.js";
-import {generateAuthResponse}from "../services/authService.js";
+import RefreshToken from "../../models/RefreshTokenModel.js";
+import {generateAuthResponse}from "../../services/authService.js";
 
 export const register = async (req, res) => {
     const err = validateRegisterBody(req.body);

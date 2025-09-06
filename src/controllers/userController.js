@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/UserModel.js";
+import { User } from "../../models/UserModel.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { JWT_ACCESS_SECRET } from "../config/env.js";
 

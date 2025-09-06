@@ -1,13 +1,15 @@
 // backend/src/controllers/blogController.js
-import Blog from "../models/Blog.js";
+import Blog from "../models/BlogModel.js";
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import { validateBlogPostBody } from '../validators/blogPostValidation.js'
 
-// ✅ Create Blog
+
 export const createBlog = async (req, res) => {
   try {
-    console.log("👉 Incoming blog create request");
-    console.log("req.user:", req.user);
-    console.log("req.body:", req.body);
-    console.log("req.file:", req.file);
+    /* const { title, content, tags, visibility } = req.body;
+    const err = validateBlogPostBody(title);
+    if (err) throw new ApiError(400, err */
 
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Unauthorized: user missing" });
@@ -23,17 +25,22 @@ export const createBlog = async (req, res) => {
     const blog = await Blog.create({
       title,
       excerpt,
+      tags,
       content,
       image,
-      author: req.user.id, // ✅ from authMiddleware
+      visibility,
+      author: req.user.id, // from authMiddleware
     });
+    await newBlogPost.save()
+    return res.status(201).json(new ApiResponse(201, "Blog post create successfully", newBlogPost))
 
-    res.status(201).json(blog);
   } catch (err) {
     console.error("❌ Error in createBlog:", err);
     res.status(500).json({ message: "Server error: " + err.message });
   }
 };
+
+//needs editing
 
 // ✅ Get all Blogs
 export const getBlogs = async (req, res) => {

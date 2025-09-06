@@ -6,9 +6,9 @@ import helmet from "helmet";
 // imports
 import connectDB from './config/dbConfig.js';
 import { PORT, NODE_ENV, CORS_ORIGIN } from './config/env.js';
-import authRoutes from './routes/authRoutes.js';
-import blogRoutes from "./routes/blogRoutes.js";
-import userRoutes from './routes/userRoutes.js';
+import authRoutes from '../routes/authRoutes.js';
+import blogRoutes from "../routes/blogRoutes.js";
+import userRoutes from '../routes/userRoutes.js';
 
 
 const app = express();
