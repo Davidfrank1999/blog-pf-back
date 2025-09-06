@@ -16,7 +16,8 @@ export const signAccessToken = (user) => {
     )
 };
 
-      
+// @TODO: verification is also in middleware/authhandler.js, 
+// .. import this there or delet this       
 /**
  * Verify access token 
  */
@@ -34,19 +35,24 @@ export const createRefreshToken = async (user) => {
     
     await RefreshToken.create({
         user: user._id,
-        token: refreshToken,
+        refreshToken: refreshToken,
         expiresAt
     });
     return refreshToken;
 };
 
 /**
- * Verify refresh token
+ * Verify refresh token and revoke
  */
-export const verifyRefreshToken = async (token) => {
-    const storedToken = await RefreshToken.findOne({ token, revoked: false }).populate('user');
+export const verifyRefreshToken = async (oldRefreshToken) => {
+    const storedToken = await RefreshToken.findOne({ refreshToken:oldRefreshToken, revoked: false }).populate('user');
+    
     if (!storedToken || storedToken.expiresAt < new Date()) {
         throw new Error('Invalid or expired refresh token');
-    }
+    } 
+    // revoke old Token
+
+    storedToken.revoked = true;
+    await storedToken.save();
     return storedToken.user;
 };  

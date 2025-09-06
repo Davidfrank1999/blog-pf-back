@@ -74,7 +74,48 @@ npm run dev # for nodeman
 
 ---
 
+## Auth & Token Flow
+
+This project uses JWT + Refresh Tokens for secure authentication.
+
+Access Token → Short-lived JWT (e.g., 15m), used for API requests.
+
+Refresh Token → Long-lived, stored in DB + sent via secure HTTP-only cookie.
+
+Flow:
+
+1. User logs in → gets access + refresh token.
+
+2. When access token expires → client requests new one using refresh token.
+
+3. Server verifies refresh token in DB → revokes old one, issues new access + refresh token.
+
+4. Expired/compromised tokens are auto-cleaned via MongoDB TTL.
+Keeps users logged in securely, supports session revocation, and prevents token reuse.
+
+---
+## Role based routes protection
+`blog-pf-back\src\constants` --> roles desigination.
+`blog-pf-back\src\controllers\authController.js` --> allowedRoles(), can be implimented in routes.
+
+---
+
 ## **API Endpoints**
+
+### **Auth Routes**
+| Method | Endpoint    | Description                | Middleware |
+| ------ | ----------- | -------------------------- | ---------- |
+| POST   | `/api/auth/register` | Register a new user        | –          |
+| POST   | `/api/auth/login`    | Login user & issue tokens  | –          |
+| POST   | `/api/auth/logout`   | Logout user & revoke token | –          |
+| POST   | `/api/auth/refresh`  | Refresh access token       | –          |
+
+### **User Routes**
+| Method | Endpoint          | Description             | Middleware   |
+| ------ | ----------------- | ----------------------- | ------------ |
+| GET    | `/api/user/getUserProfile` | Get logged-in user info | `verfyToken` |
+
+---
 
 ### **Public Routes**
 

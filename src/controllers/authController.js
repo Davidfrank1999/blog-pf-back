@@ -1,12 +1,17 @@
 import { validateLoginBody, validateRegisterBody } from "../validators/authValidation.js"
 import { User } from "../models/UserModel.js"
-import { ApiError } from "../utils/ApiError.js"
-import {verifyRefreshToken } from "../services/tokenServices.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
 import RefreshToken from "../models/RefreshTokenModel.js";
-import {generateAuthResponse}from "../services/authService.js";
 
-export const register = async (req, res) => {
+import {verifyRefreshToken } from "../services/tokenServices.js";
+
+import {generateAuthResponse, rotateRefreshToken}from "../services/authService.js";
+
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js"
+
+import { asyncHandler } from "../middleware/asyncHandler.js"
+
+export const register =asyncHandler( async (req, res) => {
     const err = validateRegisterBody(req.body);
     if (err) throw new ApiError(400, err);
 
@@ -18,12 +23,12 @@ export const register = async (req, res) => {
     const newUser = new User(req.body);
     await newUser.save();
     // generate tokens and response
-    const apiResponse = await generateAuthResponse(res, newUser);
-    return res.status(201).json(apiResponse);
+    const apiResponseData = await generateAuthResponse(res, newUser);
+    return res.status(201).json(new ApiResponse(201,"User account Succesfully created",apiResponseData ));
    
-};
+});
 
-export const login = async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
     const err = validateLoginBody(req.body);
     if (err) throw new ApiError(400, err);
 
@@ -39,12 +44,11 @@ export const login = async (req, res) => {
     if (!user.isActive) throw new ApiError(403, 'User is not active');
 
     // generate tokens and response
-    const apiResponse = await generateAuthResponse(res,user);
-    return res.status(200).json(apiResponse);
+    const apiResponseData = await generateAuthResponse(res,user);
+    return res.status(200).json(new ApiResponse(200,"User succesfully Logedin",apiResponseData ));
+});
 
-};
-
-export const logout = async (req, res) => {
+export const logout = asyncHandler(async (req, res) => {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (token) {
         res.clearCookie('refreshToken', {
@@ -52,24 +56,25 @@ export const logout = async (req, res) => {
     }  
     const result = await RefreshToken.deleteOne({ token });
     return res.status(200).json(new ApiResponse(200,result.deletedCount ? "Logout successful" : "Token not found"));
-};
+});
 
 
-//
-export const refresh = async (req, res) => {
-    const token = req.cookies?.refreshToken || req.body?.refreshToken;
-    if (!token) throw new ApiError(401, 'No refresh token provided');
+// Refresh Token Controller
+export const refresh = asyncHandler(async (req, res) => {
+    const oldRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    if (!oldRefreshToken) throw new ApiError(401, 'No oldRefreshToken provided');
 
-    // verify refresh token
+    // verify oldRefreshToken
     let user;
     try {
-        user = await verifyRefreshToken(token);
+        user = await verifyRefreshToken(oldRefreshToken);
     } catch (error) {
         throw new ApiError(401, error.message);
     }
+    
 
     // generate new tokens and response
-    const apiResponse = await generateAuthResponse(user, res);
-    return res.status(200).json(apiResponse);
+    const generatedTOken = await rotateRefreshToken(res, user);
+    return res.status(200).json(new ApiResponse(200,"Token refreshed successfully", generatedTOken));
     
-};
+});
