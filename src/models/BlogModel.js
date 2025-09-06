@@ -4,8 +4,7 @@ import mongoose from "mongoose";
 const blogSchema = new mongoose.Schema(
   {
     title:{ type: String, required: true, trim: true },
-    title: { type: String, required: true },
-    tags:{ type: [String], default: [], trim: true },
+    tags:{ type: [String], default: []},
     excerpt: { type: String, required: true },
     content: { type: String, required: true },
     image: { type: String, default: null }, // ✅ image path from multer

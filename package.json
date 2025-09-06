@@ -1,18 +1,22 @@
 {
   "name": "blog-pf-back",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/server.js",
   "type": "module",
   "contributors": [
     {
       "name": "David Franklin D.",
       "email": "davidfranklin1999@gmail.com"
+    },
+    {
+      "name": "Mohammed Aneez",
+      "email": "mohammedaneez37@gmail.com"
     }
   ],
   "description": "Blogging platform - server",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node --watch server.js",
+    "dev": "nodemon src/server.js",
+    "start": "node --watch src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

@@ -4,23 +4,27 @@ import { Router } from "express";
 import {
   createBlog,
   getBlogs,
-  getBlog,
   updateBlog,
   deleteBlog,
+  getBlogById,
 } from "../controllers/blogControllers.js"; 
-import { asyncHandler } from "../middleware/asyncHandler.js";
 import { verfyToken } from "../middleware/authHandler.js";
 import upload from "../middleware/upload.js";
 
 const blogRoutes = Router();
 
 //Public
-blogRoutes.get("/", getBlogs);
+blogRoutes.get("/:userId/", getBlogs);
 
-blogRoutes.get("/:id", getBlog);
+blogRoutes.get("/:userId/:blogId", getBlogById);
 
 
 // Protected
+blogRoutes.get("/", getBlogs);
+
+blogRoutes.get("/:id", getBlogById);
+
+
 blogRoutes.post("/createPost",verfyToken, upload.single("image"), createBlog);
 
 blogRoutes.put("/:id",verfyToken, upload.single("image"), updateBlog);

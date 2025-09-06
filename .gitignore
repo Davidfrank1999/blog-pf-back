@@ -26,3 +26,6 @@ Thumbs.db
 
 # Misc
 coverage/
+
+# Ignore uploaded files
+uploads/
