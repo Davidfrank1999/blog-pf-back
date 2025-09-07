@@ -11,6 +11,6 @@ const userRoutes = Router();
 userRoutes.get('/getUserProfile', verfyToken, getUserProfile);
 
 // protected routes
-userRoutes.get('/getallUsers',verfyToken,allowedRoles(ROLES.ADMIN, ROLES.EDITOR), "getAllUserFunction"); // example protected route
+userRoutes.get('/getallUsers',verfyToken,allowedRoles(ROLES.ADMIN, ROLES.EDITOR)); // example protected route
 
 export default userRoutes ;
