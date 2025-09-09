@@ -1,24 +1,50 @@
+// backend/src/models/Blog.js
 import mongoose from "mongoose";
-import slugify from "slugify";
 
 const blogSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    slug: { type: String, unique: true, required: true },
-    excerpt: { type: String, required: true },
-    content: { type: String, required: true },
-    image: { type: String, default: null },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
+    },
+    excerpt: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    image: {
+      type: String,
+      default: null,
+    },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    // ✅ Admin-related fields
+    approved: {
+      type: Boolean,
+      default: false, // new blogs must be approved by admin
+    },
+    visible: {
+      type: Boolean,
+      default: true, // admin can hide without deleting
+    },
   },
   { timestamps: true }
 );
 
-// Auto-generate slug
-blogSchema.pre("validate", function (next) {
-  if (this.title) {
-    this.slug = slugify(this.title, { lower: true, strict: true });
-  }
-  next();
-});
+const Blog = mongoose.model("Blog", blogSchema);
 
-export default mongoose.model("Blog", blogSchema);
+export default Blog;

@@ -4,8 +4,8 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // renamed from passwordHash → password
-    role: { type: String, enum: ["user", "admin"], default: "user" },
+    password: { type: String, required: true },
+    role: { type: String, enum: ["user", "admin"], default: "user" }, // ✅ add role
   },
   { timestamps: true }
 );
