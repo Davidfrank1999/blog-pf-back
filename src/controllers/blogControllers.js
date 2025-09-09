@@ -1,37 +1,49 @@
-// backend/src/controllers/blogController.js
+// src/controllers/blogController.js
 import Blog from "../models/Blog.js";
+import slugify from "slugify";
+
+// ✅ Helper: generate a unique slug
+const generateSlug = async (title, excludeId = null) => {
+  let baseSlug = slugify(title, { lower: true, strict: true });
+  let slug = baseSlug;
+  let counter = 1;
+
+  // If updating, exclude current blog ID from slug conflict check
+  let query = { slug };
+  if (excludeId) query._id = { $ne: excludeId };
+
+  while (await Blog.findOne(query)) {
+    slug = `${baseSlug}-${counter++}`;
+    query.slug = slug;
+  }
+
+  return slug;
+};
 
 // ✅ Create Blog
 export const createBlog = async (req, res) => {
   try {
-    console.log("👉 Incoming blog create request");
-    console.log("req.user:", req.user);
-    console.log("req.body:", req.body);
-    console.log("req.file:", req.file);
-
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "Unauthorized: user missing" });
-    }
-
     const { title, excerpt, content } = req.body;
     if (!title || !excerpt || !content) {
-      return res.status(400).json({ message: "Title, excerpt and content are required" });
+      return res.status(400).json({ message: "All fields are required" });
     }
 
+    const slug = await generateSlug(title);
     const image = req.file ? `/uploads/${req.file.filename}` : null;
 
     const blog = await Blog.create({
       title,
       excerpt,
       content,
+      slug,
       image,
-      author: req.user.id, // ✅ from authMiddleware
+      author: req.user.id, // from authMiddleware
     });
 
-    res.status(201).json(blog);
+    return res.status(201).json(blog);
   } catch (err) {
-    console.error("❌ Error in createBlog:", err);
-    res.status(500).json({ message: "Server error: " + err.message });
+    console.error("❌ Create blog error:", err.message);
+    return res.status(500).json({ message: "Server error while creating blog" });
   }
 };
 
@@ -41,10 +53,11 @@ export const getBlogs = async (req, res) => {
     const blogs = await Blog.find()
       .populate("author", "name email")
       .sort({ createdAt: -1 });
-    res.json(blogs);
+
+    return res.json(blogs);
   } catch (err) {
-    console.error("❌ Error in getBlogs:", err);
-    res.status(500).json({ message: "Server error: " + err.message });
+    console.error("❌ Get blogs error:", err.message);
+    return res.status(500).json({ message: "Server error while fetching blogs" });
   }
 };
 
@@ -52,47 +65,53 @@ export const getBlogs = async (req, res) => {
 export const getBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id).populate("author", "name email");
-    if (!blog) return res.status(404).json({ message: "Blog not found" });
-    res.json(blog);
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    return res.json(blog);
   } catch (err) {
-    console.error("❌ Error in getBlog:", err);
-    res.status(500).json({ message: "Server error: " + err.message });
+    console.error("❌ Get blog error:", err.message);
+    return res.status(500).json({ message: "Server error while fetching blog" });
   }
 };
 
 // ✅ Update Blog
 export const updateBlog = async (req, res) => {
   try {
-    console.log("👉 Updating blog:", req.params.id, req.body);
-
     const { title, excerpt, content } = req.body;
-    const updateData = { title, excerpt, content };
+    const updateData = { excerpt, content };
+
+    if (title) {
+      updateData.title = title;
+      updateData.slug = await generateSlug(title, req.params.id);
+    }
 
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
     }
 
     const blog = await Blog.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!blog) return res.status(404).json({ message: "Blog not found" });
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
 
-    res.json(blog);
+    return res.json(blog);
   } catch (err) {
-    console.error("❌ Error in updateBlog:", err);
-    res.status(500).json({ message: "Server error: " + err.message });
+    console.error("❌ Update blog error:", err.message);
+    return res.status(500).json({ message: "Server error while updating blog" });
   }
 };
 
 // ✅ Delete Blog
 export const deleteBlog = async (req, res) => {
   try {
-    console.log("👉 Deleting blog:", req.params.id);
-
     const blog = await Blog.findByIdAndDelete(req.params.id);
-    if (!blog) return res.status(404).json({ message: "Blog not found" });
-
-    res.json({ message: "Blog deleted" });
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    return res.json({ message: "Blog deleted successfully" });
   } catch (err) {
-    console.error("❌ Error in deleteBlog:", err);
-    res.status(500).json({ message: "Server error: " + err.message });
+    console.error("❌ Delete blog error:", err.message);
+    return res.status(500).json({ message: "Server error while deleting blog" });
   }
 };

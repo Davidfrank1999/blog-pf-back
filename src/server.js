@@ -11,8 +11,19 @@ import blogRoutes from "./routes/blogRoutes.js";
 dotenv.config();
 const app = express();
 
+// ✅ Allowed origins (frontend URLs)
+const allowedOrigins = [
+  "http://localhost:5173", // local frontend
+  // Add your deployed frontend URL here later
+];
+
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true, // ✅ allow cookies/authorization headers
+  })
+);
 app.use(express.json());
 app.use(helmet());
 
