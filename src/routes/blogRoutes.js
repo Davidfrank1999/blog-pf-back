@@ -7,12 +7,13 @@ import {
   updateBlog,
   deleteBlog,
   updateBlogStatus,
+  getAllBlogs,
 } from "../controllers/blogControllers.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Multer setup for file uploads
+// 🔹 Multer setup for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -23,7 +24,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ Admin-only middleware
+// 🔹 Admin-only middleware
 const adminMiddleware = (req, res, next) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ message: "Forbidden: Admins only" });
@@ -31,16 +32,23 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-// ✅ Public routes
+// --------------------
+// Public Routes
+// --------------------
 router.get("/", getBlogs);
 router.get("/:id", getBlog);
 
-// ✅ Protected routes
+// --------------------
+// Authenticated User
+// --------------------
 router.post("/", authMiddleware, upload.single("image"), createBlog);
-router.put("/:id", authMiddleware, updateBlog);
+router.put("/:id", authMiddleware, upload.single("image"), updateBlog);
 router.delete("/:id", authMiddleware, deleteBlog);
 
-// ✅ Admin route for approving/rejecting blogs
+// --------------------
+// Admin
+// --------------------
+router.get("/admin/all", authMiddleware, adminMiddleware, getAllBlogs);
 router.patch("/:id/status", authMiddleware, adminMiddleware, updateBlogStatus);
 
 export default router;
