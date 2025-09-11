@@ -8,6 +8,7 @@ import {
   deleteBlog,
   updateBlogStatus,
   getAllBlogs,
+  toggleBlogVisibility,
 } from "../controllers/blogControllers.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -33,22 +34,23 @@ const adminMiddleware = (req, res, next) => {
 };
 
 // --------------------
+// Admin Routes
+// --------------------
+router.get("/admin/all", authMiddleware, adminMiddleware, getAllBlogs);
+router.patch("/:id/status", authMiddleware, adminMiddleware, updateBlogStatus);
+router.patch("/:id/visibility", authMiddleware, adminMiddleware, toggleBlogVisibility);
+
+// --------------------
 // Public Routes
 // --------------------
 router.get("/", getBlogs);
 router.get("/:id", getBlog);
 
 // --------------------
-// Authenticated User
+// Authenticated User Routes
 // --------------------
 router.post("/", authMiddleware, upload.single("image"), createBlog);
 router.put("/:id", authMiddleware, upload.single("image"), updateBlog);
 router.delete("/:id", authMiddleware, deleteBlog);
-
-// --------------------
-// Admin
-// --------------------
-router.get("/admin/all", authMiddleware, adminMiddleware, getAllBlogs);
-router.patch("/:id/status", authMiddleware, adminMiddleware, updateBlogStatus);
 
 export default router;

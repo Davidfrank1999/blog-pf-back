@@ -14,7 +14,7 @@ const generateSlug = async (title) => {
   return slug;
 };
 
-// 🔹 Create Blog (user)
+// 🔹 Create Blog (user creates → pending)
 export const createBlog = async (req, res) => {
   try {
     const { title, excerpt, content } = req.body;
@@ -28,7 +28,8 @@ export const createBlog = async (req, res) => {
       content,
       image,
       slug,
-      status: "pending", // default = pending until admin approves
+      status: "pending",
+      visible: true,
       author: req.user.id,
     });
 
@@ -39,10 +40,10 @@ export const createBlog = async (req, res) => {
   }
 };
 
-// 🔹 Get all approved blogs (public feed)
+// 🔹 Public: Get only approved + visible blogs
 export const getBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find({ status: "approved" })
+    const blogs = await Blog.find({ status: "approved", visible: true })
       .populate("author", "name email")
       .sort({ createdAt: -1 });
 
@@ -52,11 +53,14 @@ export const getBlogs = async (req, res) => {
   }
 };
 
-// 🔹 Get single blog (only approved)
+// 🔹 Public: Get single approved + visible blog
 export const getBlog = async (req, res) => {
   try {
-    const blog = await Blog.findOne({ _id: req.params.id, status: "approved" })
-      .populate("author", "name email");
+    const blog = await Blog.findOne({
+      _id: req.params.id,
+      status: "approved",
+      visible: true,
+    }).populate("author", "name email");
 
     if (!blog) return res.status(404).json({ message: "Blog not found" });
     res.json(blog);
@@ -65,27 +69,26 @@ export const getBlog = async (req, res) => {
   }
 };
 
-// 🔹 Update Blog (only by author)
+// 🔹 User: Update own blog
 export const updateBlog = async (req, res) => {
   try {
     const { title, excerpt, content } = req.body;
     const updateData = { title, excerpt, content };
 
-    if (title) {
-      updateData.slug = await generateSlug(title);
-    }
-
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
-    }
+    if (title) updateData.slug = await generateSlug(title);
+    if (req.file) updateData.image = `/uploads/${req.file.filename}`;
 
     const blog = await Blog.findOneAndUpdate(
-      { _id: req.params.id, author: req.user.id }, // user can only update their blog
+      { _id: req.params.id, author: req.user.id },
       updateData,
       { new: true }
     );
 
-    if (!blog) return res.status(404).json({ message: "Blog not found or not yours" });
+    if (!blog) {
+      return res
+        .status(404)
+        .json({ message: "Blog not found or not owned by you" });
+    }
 
     res.json(blog);
   } catch (err) {
@@ -110,7 +113,7 @@ export const deleteBlog = async (req, res) => {
   }
 };
 
-// 🔹 Approve / Reject Blog (admin only)
+// 🔹 Admin: Approve / Reject Blog
 export const updateBlogStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -133,10 +136,27 @@ export const updateBlogStatus = async (req, res) => {
   }
 };
 
-// 🔹 Admin: get all blogs
+// 🔹 Admin: Toggle blog visibility
+export const toggleBlogVisibility = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    blog.visible = !blog.visible;
+    await blog.save();
+
+    res.json({ message: `Blog ${blog.visible ? "visible" : "hidden"}`, blog });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🔹 Admin: Get all blogs
 export const getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find().populate("author", "name email");
+    const blogs = await Blog.find()
+      .populate("author", "name email")
+      .sort({ createdAt: -1 });
     res.json(blogs);
   } catch (err) {
     res.status(500).json({ message: err.message });
