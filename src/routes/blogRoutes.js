@@ -4,28 +4,34 @@ import {
   createBlog,
   getBlogs,
   getBlog,
-  updateBlog,
-  deleteBlog,
   updateBlogStatus,
+  deleteBlog,
   getAllBlogs,
   toggleBlogVisibility,
+  getBlogAdmin,
 } from "../controllers/blogControllers.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔹 Multer setup for file uploads
+// multer
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// 🔹 Admin-only middleware
+// ✅ Optional auth wrapper (for public routes)
+const optionalAuth = async (req, res, next) => {
+  if (req.headers.authorization?.startsWith("Bearer ")) {
+    return authMiddleware(req, res, next);
+  }
+  next();
+};
+
+// --------------------
+// Admin routes (must come before public `:id`)
+// --------------------
 const adminMiddleware = (req, res, next) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ message: "Forbidden: Admins only" });
@@ -33,24 +39,21 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-// --------------------
-// Admin Routes
-// --------------------
 router.get("/admin/all", authMiddleware, adminMiddleware, getAllBlogs);
+router.get("/admin/:id", authMiddleware, adminMiddleware, getBlogAdmin);
 router.patch("/:id/status", authMiddleware, adminMiddleware, updateBlogStatus);
 router.patch("/:id/visibility", authMiddleware, adminMiddleware, toggleBlogVisibility);
 
 // --------------------
-// Public Routes
+// Public/User/Admin routes
 // --------------------
-router.get("/", getBlogs);
+router.get("/", optionalAuth, getBlogs); // ✅ now admin sees everything
 router.get("/:id", getBlog);
 
 // --------------------
-// Authenticated User Routes
+// Authenticated user routes
 // --------------------
 router.post("/", authMiddleware, upload.single("image"), createBlog);
-router.put("/:id", authMiddleware, upload.single("image"), updateBlog);
 router.delete("/:id", authMiddleware, deleteBlog);
 
 export default router;

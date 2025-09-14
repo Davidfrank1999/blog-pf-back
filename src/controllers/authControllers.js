@@ -1,3 +1,4 @@
+// backend/src/controllers/authController.js
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
@@ -9,7 +10,7 @@ export const signup = async (req, res) => {
     const { name, email, password, role } = req.body;
 
     // Prevent users from creating admins directly
-    const safeRole = role === "admin" ? "user" : role;
+    const safeRole = role === "admin" ? "user" : role || "user";
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: "Email already exists" });
@@ -43,13 +44,16 @@ export const login = async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    // ✅ include role in JWT payload
+    const token = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.json({
       token,
-      user: { id: user._id, email: user.email, role: user.role },
+      user: { id: user._id, email: user.email, role: user.role, name: user.name },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

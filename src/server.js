@@ -42,3 +42,12 @@ mongoose
     );
   })
   .catch((err) => console.error("❌ DB connection error:", err));
+
+  app.get("/api/debug/blogs", async (req, res) => {
+  try {
+    const blogs = await mongoose.connection.db.collection("blogs").find().toArray();
+    res.json({ count: blogs.length, blogs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

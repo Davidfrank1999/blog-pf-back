@@ -1,3 +1,4 @@
+// backend/src/middleware/authMiddleware.js
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config.js";
 import User from "../models/User.js";
@@ -19,12 +20,20 @@ export const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized: Invalid or expired token" });
     }
 
+    // ✅ Always fetch fresh user to ensure role is up-to-date
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ message: "Unauthorized: User not found" });
     }
 
-    req.user = { id: user._id, email: user.email, role: user.role };
+    // Attach user to request
+    req.user = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+
     next();
   } catch (err) {
     console.error("❌ Auth error:", err.message);
@@ -32,9 +41,9 @@ export const authMiddleware = async (req, res, next) => {
   }
 };
 
-// ✅ Extra middleware for admin-only routes
+// ✅ Middleware for admin-only routes
 export const adminOnly = (req, res, next) => {
-  if (req.user.role !== "admin") {
+  if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "Forbidden: Admins only" });
   }
   next();
