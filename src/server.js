@@ -1,53 +1,35 @@
-// backend/src/server.js
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import helmet from "helmet";
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-import authRoutes from "./routes/authRoutes.js";
-import blogRoutes from "./routes/blogRoutes.js";
+import connectDB from '../config/dbConfig.js';
+import { PORT, NODE_ENV } from '../config/env.js';
+import authRoutes from './routes/authRoutes.js';
+import blogRoutes from './routes/blogRoutes.js';
 
-dotenv.config();
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// ✅ Allowed origins (frontend URLs)
-const allowedOrigins = [
-  "http://localhost:5173", // local frontend
-  // Add your deployed frontend URL here later
-];
-
-// Middleware
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true, // ✅ allow cookies/authorization headers
-  })
-);
+// Middlewares
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}));
 app.use(express.json());
-app.use(helmet());
+
+// ✅ Serve uploads folder
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/blogs", blogRoutes);
-app.use("/uploads", express.static("uploads"));
 
-// DB connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(process.env.PORT || 5000, () =>
-      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
-    );
-  })
-  .catch((err) => console.error("❌ DB connection error:", err));
+// Connect DB
+connectDB();
 
-  app.get("/api/debug/blogs", async (req, res) => {
-  try {
-    const blogs = await mongoose.connection.db.collection("blogs").find().toArray();
-    res.json({ count: blogs.length, blogs });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running in ${NODE_ENV} mode on port ${PORT}`);
 });

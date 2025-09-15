@@ -14,7 +14,7 @@ const generateSlug = async (title) => {
   return slug;
 };
 
-// 🔹 Create Blog (user → pending)
+// 🔹 Create Blog
 export const createBlog = async (req, res) => {
   try {
     const { title, excerpt, content } = req.body;
@@ -27,15 +27,52 @@ export const createBlog = async (req, res) => {
       content,
       image,
       slug,
-      status: "pending", // new blogs start as pending
+      status: "pending",
       visible: true,
       author: req.user.id,
     });
 
-    console.log("✅ Blog created:", blog._id, blog.title);
     res.status(201).json({ message: "Blog submitted for review", blog });
   } catch (err) {
-    console.error("❌ Create blog error:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🔹 Toggle Like
+export const toggleLike = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    const userId = req.user.id;
+    if (blog.likes.includes(userId)) {
+      blog.likes.pull(userId);
+    } else {
+      blog.likes.push(userId);
+    }
+
+    await blog.save();
+    res.json({ likes: blog.likes.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🔹 Add Comment
+export const addComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ message: "Comment text required" });
+
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    blog.comments.push({ user: req.user.id, text });
+    await blog.save();
+    await blog.populate("comments.user", "name email");
+
+    res.status(201).json({ comments: blog.comments });
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
@@ -43,33 +80,30 @@ export const createBlog = async (req, res) => {
 // 🔹 Public / Admin: Get blogs
 export const getBlogs = async (req, res) => {
   try {
-    let filter = { status: "approved", visible: true }; // default for public & users
-
-    // ✅ If logged-in admin → show everything
-    if (req.user?.role === "admin") {
-      filter = {}; // no restrictions
-    }
+    let filter = { status: "approved", visible: true };
+    if (req.user?.role === "admin") filter = {};
 
     const blogs = await Blog.find(filter)
       .populate("author", "name email")
+      .populate("comments.user", "name email")
       .sort({ createdAt: -1 });
 
-    console.log("📥 Blogs fetched:", blogs.length);
     res.json(blogs);
   } catch (err) {
-    console.error("❌ Get blogs error:", err.message);
     res.status(500).json({ message: err.message });
   }
 };
 
-// 🔹 Public: Get single approved + visible blog
+// 🔹 Public: Get single blog
 export const getBlog = async (req, res) => {
   try {
     const blog = await Blog.findOne({
       _id: req.params.id,
       status: "approved",
       visible: true,
-    }).populate("author", "name email");
+    })
+      .populate("author", "name email")
+      .populate("comments.user", "name email");
 
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 
@@ -79,28 +113,27 @@ export const getBlog = async (req, res) => {
   }
 };
 
-// 🔹 Admin: Get all blogs (for admin dashboard)
+// 🔹 Admin: Get all blogs
 export const getAllBlogs = async (req, res) => {
   try {
-    console.log("🔥 Admin fetching all blogs...");
     const blogs = await Blog.find()
       .populate("author", "name email")
+      .populate("comments.user", "name email")
       .sort({ createdAt: -1 });
 
-    console.log("📥 Blogs fetched:", blogs.length);
     res.json(blogs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 🔹 Admin: Get single blog (any status)
+// 🔹 Admin: Get single blog
 export const getBlogAdmin = async (req, res) => {
   try {
-    const blog = await Blog.findById(req.params.id).populate(
-      "author",
-      "name email"
-    );
+    const blog = await Blog.findById(req.params.id)
+      .populate("author", "name email")
+      .populate("comments.user", "name email");
+
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 
     res.json(blog);
@@ -125,7 +158,6 @@ export const updateBlogStatus = async (req, res) => {
 
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 
-    console.log(`✅ Blog ${blog._id} status updated → ${status}`);
     res.json({ message: `Blog ${status}`, blog });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -141,22 +173,18 @@ export const toggleBlogVisibility = async (req, res) => {
     blog.visible = !blog.visible;
     await blog.save();
 
-    console.log(
-      `👁️ Blog ${blog._id} visibility → ${blog.visible ? "Visible" : "Hidden"}`
-    );
     res.json({ message: `Blog ${blog.visible ? "visible" : "hidden"}`, blog });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 🔹 Delete Blog (Admin or Author)
+// 🔹 Delete Blog
 export const deleteBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 
-    // allow delete by admin or blog owner
     if (req.user.role !== "admin" && blog.author.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not authorized" });
     }
@@ -164,7 +192,6 @@ export const deleteBlog = async (req, res) => {
     await blog.deleteOne();
     res.status(200).json({ message: "Blog deleted successfully" });
   } catch (error) {
-    console.error("❌ Delete Blog Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

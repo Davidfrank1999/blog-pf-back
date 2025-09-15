@@ -1,6 +1,14 @@
 // backend/src/models/Blog.js
 import mongoose from "mongoose";
 
+const commentSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, required: true, trim: true },
+  },
+  { timestamps: true }
+);
+
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -10,20 +18,20 @@ const blogSchema = new mongoose.Schema(
     image: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-    // canonical status field (preferred)
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
 
-    // keep visible boolean (admin can hide/unhide)
-    visible: {
-      type: Boolean,
-      default: true,
-    },
+    visible: { type: Boolean, default: true },
 
-    // backwards compatibility: older docs might have `approved: Boolean`
+    // ✅ Likes
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // ✅ Comments
+    comments: [commentSchema],
+
     approved: {
       type: Boolean,
       default: undefined,

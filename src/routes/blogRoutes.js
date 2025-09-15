@@ -1,3 +1,4 @@
+// backend/src/routes/blogRoutes.js
 import express from "express";
 import multer from "multer";
 import {
@@ -9,6 +10,8 @@ import {
   getAllBlogs,
   toggleBlogVisibility,
   getBlogAdmin,
+  toggleLike,
+  addComment,
 } from "../controllers/blogControllers.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -21,7 +24,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ Optional auth wrapper (for public routes)
+// ✅ Optional auth wrapper
 const optionalAuth = async (req, res, next) => {
   if (req.headers.authorization?.startsWith("Bearer ")) {
     return authMiddleware(req, res, next);
@@ -30,7 +33,13 @@ const optionalAuth = async (req, res, next) => {
 };
 
 // --------------------
-// Admin routes (must come before public `:id`)
+// Likes & Comments
+// --------------------
+router.post("/:id/like", authMiddleware, toggleLike);
+router.post("/:id/comment", authMiddleware, addComment);
+
+// --------------------
+// Admin routes
 // --------------------
 const adminMiddleware = (req, res, next) => {
   if (req.user?.role !== "admin") {
@@ -47,7 +56,7 @@ router.patch("/:id/visibility", authMiddleware, adminMiddleware, toggleBlogVisib
 // --------------------
 // Public/User/Admin routes
 // --------------------
-router.get("/", optionalAuth, getBlogs); // ✅ now admin sees everything
+router.get("/", optionalAuth, getBlogs);
 router.get("/:id", getBlog);
 
 // --------------------
