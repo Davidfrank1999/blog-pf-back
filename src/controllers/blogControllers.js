@@ -17,7 +17,7 @@ const generateSlug = async (title) => {
 // 🔹 Create Blog
 export const createBlog = async (req, res) => {
   try {
-    const { title, excerpt, content } = req.body;
+    const { title, excerpt, content, tags } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : null;
     const slug = await generateSlug(title);
 
@@ -27,6 +27,7 @@ export const createBlog = async (req, res) => {
       content,
       image,
       slug,
+      tags: tags ? tags.split(",").map((t) => t.trim()) : [],
       status: "pending",
       visible: true,
       author: req.user.id,
@@ -52,7 +53,9 @@ export const toggleLike = async (req, res) => {
     }
 
     await blog.save();
-    res.json({ likes: blog.likes.length });
+    await blog.populate("likes", "name email");
+
+    res.json({ likes: blog.likes });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -77,11 +80,26 @@ export const addComment = async (req, res) => {
   }
 };
 
-// 🔹 Public / Admin: Get blogs
+// 🔹 Public / Admin: Get blogs (with search + filters)
 export const getBlogs = async (req, res) => {
   try {
     let filter = { status: "approved", visible: true };
     if (req.user?.role === "admin") filter = {};
+
+    // 🏷️ Filter by tag
+    if (req.query.tag) {
+      filter.tags = { $in: [req.query.tag] };
+    }
+
+    // 🔍 Search in title, excerpt, content
+    if (req.query.search) {
+      const regex = new RegExp(req.query.search, "i"); // case-insensitive
+      filter.$or = [
+        { title: regex },
+        { excerpt: regex },
+        { content: regex },
+      ];
+    }
 
     const blogs = await Blog.find(filter)
       .populate("author", "name email")
@@ -94,14 +112,17 @@ export const getBlogs = async (req, res) => {
   }
 };
 
-// 🔹 Public: Get single blog
+// 🔹 Public: Get single blog (by slug OR ObjectId)
 export const getBlog = async (req, res) => {
   try {
-    const blog = await Blog.findOne({
-      _id: req.params.id,
-      status: "approved",
-      visible: true,
-    })
+    const query = req.params.slugOrId;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(query);
+
+    const blog = await Blog.findOne(
+      isObjectId
+        ? { _id: query, status: "approved", visible: true }
+        : { slug: query, status: "approved", visible: true }
+    )
       .populate("author", "name email")
       .populate("comments.user", "name email");
 
@@ -119,6 +140,7 @@ export const getAllBlogs = async (req, res) => {
     const blogs = await Blog.find()
       .populate("author", "name email")
       .populate("comments.user", "name email")
+      .populate("likes", "name email")
       .sort({ createdAt: -1 });
 
     res.json(blogs);
@@ -127,12 +149,13 @@ export const getAllBlogs = async (req, res) => {
   }
 };
 
-// 🔹 Admin: Get single blog
+// 🔹 Admin: Get single blog (with likes + comments)
 export const getBlogAdmin = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id)
       .populate("author", "name email")
-      .populate("comments.user", "name email");
+      .populate("comments.user", "name email")
+      .populate("likes", "name email");
 
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 

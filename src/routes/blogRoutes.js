@@ -4,7 +4,7 @@ import multer from "multer";
 import {
   createBlog,
   getBlogs,
-  getBlog,
+  getBlog,            // ✅ use this for both slug & id
   updateBlogStatus,
   deleteBlog,
   getAllBlogs,
@@ -12,7 +12,7 @@ import {
   getBlogAdmin,
   toggleLike,
   addComment,
-} from "../controllers/blogControllers.js";
+} from "../controllers/blogControllers.js";  // ✅ make sure filename matches exactly
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -57,7 +57,9 @@ router.patch("/:id/visibility", authMiddleware, adminMiddleware, toggleBlogVisib
 // Public/User/Admin routes
 // --------------------
 router.get("/", optionalAuth, getBlogs);
-router.get("/:id", getBlog);
+
+// ✅ handles BOTH slug and id
+router.get("/:idOrSlug", getBlog);
 
 // --------------------
 // Authenticated user routes

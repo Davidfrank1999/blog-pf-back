@@ -1,4 +1,3 @@
-// backend/src/models/Blog.js
 import mongoose from "mongoose";
 
 const commentSchema = new mongoose.Schema(
@@ -18,6 +17,9 @@ const blogSchema = new mongoose.Schema(
     image: { type: String, default: null },
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
+    // ✅ Tags
+    tags: [{ type: String, trim: true }],
+
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -26,16 +28,10 @@ const blogSchema = new mongoose.Schema(
 
     visible: { type: Boolean, default: true },
 
-    // ✅ Likes
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-
-    // ✅ Comments
     comments: [commentSchema],
 
-    approved: {
-      type: Boolean,
-      default: undefined,
-    },
+    approved: { type: Boolean, default: undefined },
   },
   { timestamps: true }
 );
