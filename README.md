@@ -113,7 +113,7 @@ Keeps users logged in securely, supports session revocation, and prevents token 
 ### **User Routes**
 | Method | Endpoint          | Description             | Middleware   |
 | ------ | ----------------- | ----------------------- | ------------ |
-| GET    | `/api/user/getUserProfile` | Get logged-in user info | `verfyToken` |
+| GET    | `/api/user/getUserProfile` | Get logged-in user info | `verifyToken` |
 
 ---
 

@@ -1,5 +1,7 @@
 // backend/src/controllers/blogController.js
 import Blog from "../models/BlogModel.js";
+import slugify from "slugify";
+
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { validateBlogPostBody } from '../validators/blogValidation.js'
@@ -7,6 +9,19 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 
 import path from "path"; //temp delete
 import fs  from "fs"; // temp delete
+
+//TODO: move to utils
+// 🔹 Helper: generate unique slug
+const generateSlug = async (title) => {
+  let baseSlug = slugify(title, { lower: true, strict: true });
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (await Blog.findOne({ slug })) {
+    slug = `${baseSlug}-${counter++}`;
+  }
+  return slug;
+};
 
 // Protected routes
 export const createBlog = asyncHandler(async (req, res) => {
@@ -22,26 +37,42 @@ export const createBlog = asyncHandler(async (req, res) => {
     const err = validateBlogPostBody({ title, excerpt, content, visibility });
     if (err) throw new ApiError(400, err);
 
+    const slug = await generateSlug(title);
     const image = req.file ? `uploads/${req.file.filename}` : null;
+    let formattedTags = [];
+    if (tags) {
+      if (Array.isArray(tags)) {
+        formattedTags = tags.map(t => t.trim());
+      } else if (typeof tags === "string") {
+        formattedTags = tags.split(",").map(t => t.trim());
+      } else {
+        throw new ApiError(400, "Invalid tags format");
+      }
+    }
 
     const newBlog = await Blog.create({ // .create also saves in db
       title,
       excerpt,
-      tags,
+
       content,
+      slug,
+      tags: formattedTags,
+      visibility: visibility || "public", // owner control
+      status: "pending", // moderation flow
       image,
-      visibility,
+
       author: req.user._id, // from authMiddleware
     });
     
-    return res.status(201).json(new ApiResponse(201, "Blog post create successfully", newBlog));
+    return res.status(201).json(new ApiResponse(201, "Blog submitted for review", newBlog));
 });
 
 //needs editing
 
 // Public routes and private routes
 
-/**
+/** 
+ * @TODO edit this description
  * @route GET /api/users/:userId/blogs
  * @desc Get blogs of a specific user
  * - If the logged-in user requests their own blogs, return both public and private.
@@ -53,31 +84,44 @@ export const createBlog = asyncHandler(async (req, res) => {
  */
 export const getBlogs = asyncHandler(async(req, res) => {
 
-  const { userId } = req.query; // optional filter
+  const { userId, tag, search, visibility } = req.query; // optional filter
   const currentUserId = req.user ? req.user.id : null;
-  const { visibility } = req.body; // optional filter when owner requests their blogs
-
-  // Build filter
+  
   let filter = {};
-  if (userId) {
-    if (currentUserId && currentUserId.toString() === userId) {
-      // Owner: can see their own blogs (with optional visibility filter)
-      filter.author = userId;
-      if (visibility) filter.visibility = req.body.visibility; // "public" or "private"
-    } else {
-      // Other people: only see public blogs
-      filter = { author: userId, visibility: "public" };
-    }
-  } else {
-    // No userId: show all public blogs
-    filter = { visibility: "public" };
+  // If admin → override filters
+  if (req.user?.role === "admin") {
+    filter = {};
   }
 
-  const blogs = await Blog.find(/* filter */)
+  // User blogs
+  if (userId) {
+    if (currentUserId && currentUserId === userId) {
+      // Owner can see their own blogs
+      filter.author = userId;
+      if (visibility) filter.visibility = visibility;
+    } else {
+      // Others can only see public blogs
+      filter = { author: userId, visibility: "public", status: "approved" };
+    }
+  }
+
+  // Tag filter
+  if (tag) filter.tags = { $in: [tag] };
+
+  // Search filter
+  if (search) {
+    const regex = new RegExp(search, "i");
+    filter.$or = [{ title: regex }, { excerpt: regex }, { content: regex }];
+  }
+
+  const blogs = await Blog.find(filter)
     .populate("author", "name email")
+    .populate("comments.user", "name email")
     .sort({ createdAt: -1 });
-  
-    return res.status(200).json(new ApiResponse(200, "Blogs fetched successfully", blogs));
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Blogs fetched successfully", blogs));
 });
 
 
@@ -93,9 +137,12 @@ export const getBlogs = asyncHandler(async(req, res) => {
  */
 export const getBlogById = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
-  const currentUserId = req.user ? req.user.id : null;
+  const currentUserId = req.user ? req.user.id.toString() : null;
 
-  const blog = await Blog.findById(blogId).populate("author", "name email");
+  const blog = await Blog.findById(blogId)
+    .populate("author", "name email")
+    .populate("comments.user", "name email");
+
   if (!blog) throw new ApiError(404,"Blog not found");
 
   // @TODO: check this filter condition
@@ -114,7 +161,7 @@ export const getBlogById = asyncHandler(async (req, res) => {
 
 // Update Blog
 export const updateBlog = asyncHandler(async (req, res) => {
-  console.log("👉 Updating blog:", req.params.id, req.body); //console
+
 
   const { id: blogId } = req.params;
 
@@ -169,6 +216,7 @@ export const deleteBlog = asyncHandler(async (req, res) => {
     }
 
     // Delete uploaded image if exists
+    //@TODO move to utils and change to cloudinery
     if (blog.image) {
         const imagePath = path.join(process.cwd(), blog.image); // absolute path
         fs.unlink(imagePath, (err) => {
@@ -181,8 +229,77 @@ export const deleteBlog = asyncHandler(async (req, res) => {
     }
 
 
-    // Delete the blog
+    // Delete the blog in db
     await Blog.findByIdAndDelete(blogId);
 
     return res.status(200).json(new ApiResponse(200, "Blog deleted successfully", blog));
+});
+
+//@TODO: check these 👇 codes
+// 🔹 Toggle Like
+export const toggleLike = asyncHandler(async (req, res) => {
+  const blog = await Blog.findById(req.params.blogId);
+  if (!blog) throw new ApiError(404, "Blog not found");
+
+  const userId = req.user._id.toString();
+  if (blog.likes.includes(userId)) {
+    blog.likes.pull(userId);
+  } else {
+    blog.likes.push(userId);
+  }
+
+  await blog.save();
+  await blog.populate("likes", "name email");
+
+  return res.status(200).json(new ApiResponse(200, "Like toggled", blog.likes));
+});
+
+// 🔹 Add Comment
+export const addComment = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  if (!text) throw new ApiError(400, "Comment text required");
+
+  const blog = await Blog.findById(req.params.blogId);
+  if (!blog) throw new ApiError(404, "Blog not found");
+
+  blog.comments.push({ user: req.user._id, text });
+  await blog.save();
+  await blog.populate("comments.user", "name email");
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, "Comment added", blog.comments));
+});
+
+// 🔹 Admin: Update Blog Status
+export const updateBlogStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!["approved", "rejected", "pending"].includes(status)) {
+    throw new ApiError(400, "Invalid status");
+  }
+  console.log('▶️',req.params.blogId);
+  const blog = await Blog.findByIdAndUpdate(
+    req.params.blogId,
+    { status },
+    { new: true }
+  ).populate("author", "name email");
+
+  if (!blog) throw new ApiError(404, "Blog not found");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, `Blog ${status}`, blog));
+});
+
+// 🔹 Admin: Toggle Blog Visibility
+export const toggleBlogVisibility = asyncHandler(async (req, res) => {
+  const blog = await Blog.findById(req.params.blogId);
+  if (!blog) throw new ApiError(404, "Blog not found");
+
+  blog.visible = !blog.visible;
+  await blog.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, `Blog ${blog.visible ? "visible" : "hidden"}`, blog));
 });

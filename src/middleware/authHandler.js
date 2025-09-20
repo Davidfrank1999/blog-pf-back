@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { ApiError } from '../utils/ApiError.js';
 import { JWT_ACCESS_SECRET } from '../config/env.js';
 
-export const verfyToken = (req, res, next) => {
+export const verifyToken = (req, res, next) => {
     const header = req.headers['authorization'];
     const token = header?.startsWith('Bearer ') ? header.split(' ')[1] : null;
     if (!token) throw new ApiError(401,'Access denied. No token provided.'); 
