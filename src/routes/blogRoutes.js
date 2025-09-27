@@ -44,12 +44,12 @@ blogRoutes.get("/:blogIdOrSlug", getBlogById);
 
 
 // Protected
-blogRoutes.get("/", getBlogs); //@ToDO: check route
+blogRoutes.get("/getBlogs", getBlogs); //@ToDO: check route
 
 /* blogRoutes.get("/:blogId", getBlogById); */ // @TODO: for protected routr ? combine with above
 
 // owner
-blogRoutes.post("/createPost",verifyToken, upload.single("image"), createBlog);
+blogRoutes.post("/createBlog",verifyToken, upload.single("image"), createBlog);
 
 blogRoutes.put("/:id",verifyToken, upload.single("image"), updateBlog);
 

@@ -15,7 +15,7 @@ const blogSchema = new mongoose.Schema(
     slug: { type: String, unique: true, index: true },
     tags:{ type: [String], default: []},
     excerpt: { type: String, required: true },
-    content: { type: String, required: true },
+    content: { type: mongoose.Schema.Types.Mixed, required: true },
     image: { type: String, default: null }, // ✅ image path from multer
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     visibility:{ type: String, enum: ['public', 'private'], default: 'public' },
