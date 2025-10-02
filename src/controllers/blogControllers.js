@@ -124,6 +124,26 @@ export const getBlogs = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, "Blogs fetched successfully", blogs));
 });
 
+//Get blogs by tags
+export const getBlogsByTag = asyncHandler(async(req, res) => {
+
+  const { tags } = req.params; // comma separated tags
+  if (!tags) throw new ApiError(400, "Tags parameter is required"); 
+  const tagList = tags.split(",").map(t => t.trim());
+
+  const blogsByTag = await Promise.all(tagList.map(async (tag) => {
+    const blogs = await Blog.find({ tags: tag, visibility: "public"}) // @TODO: add , approved:true 
+      .populate("author", "name email")
+      .sort({ createdAt: -1 });
+    return { tag, blogs };
+  }
+  ));
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Blogs by tags fetched successfully", blogsByTag));
+});
+
 
 // Get single Blog
 /**
@@ -136,10 +156,9 @@ export const getBlogs = asyncHandler(async(req, res) => {
  * @return {Object} Blog document with author populated
  */
 export const getBlogById = asyncHandler(async (req, res) => {
-  const { blogId } = req.params;
+  const { blogIdOrSlug } = req.params;
   const currentUserId = req.user ? req.user.id.toString() : null;
-
-  const blog = await Blog.findById(blogId)
+  const blog = await Blog.findById(blogIdOrSlug)
     .populate("author", "name email")
     .populate("comments.user", "name email");
 

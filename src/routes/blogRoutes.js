@@ -9,7 +9,8 @@ import {
   deleteBlog,
   toggleBlogVisibility,
   toggleLike,
-  addComment
+  addComment,
+  getBlogsByTag
 } from "../controllers/blogControllers.js"; 
 import { verifyToken } from "../middleware/authHandler.js";
 import upload from "../middleware/upload.js";
@@ -40,7 +41,9 @@ const optionalAuth = async (req, res, next) => {
 //Public
 blogRoutes.get("/:userId/", getBlogs); //@TODO:  categorize admin, moderator, etc
 
-blogRoutes.get("/:blogIdOrSlug", getBlogById);
+blogRoutes.get("/tagfilters/:tags", getBlogsByTag );
+
+blogRoutes.get("/blogRead/:blogIdOrSlug", getBlogById);
 
 
 // Protected
